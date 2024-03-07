@@ -1,9 +1,6 @@
-using System.Collections;
-using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.SceneManagement;
-using UnityEngine.UI;
 
 public class PlayerLife : MonoBehaviour
 {
@@ -20,10 +17,10 @@ public class PlayerLife : MonoBehaviour
     {
         rb = GetComponent<Rigidbody2D>();
         ui = GameObject.Find("UICanvas");
-        ui.transform.Find("DeathCounter").GetComponent<TextMeshProUGUI>().text = "Death count: " + DeathCount;
         animator = GetComponent<Animator>();
+
     }
-   
+
 
     private void OnTriggerEnter2D(Collider2D other)
     {
@@ -37,9 +34,7 @@ public class PlayerLife : MonoBehaviour
 
     private void Die()
     {
-        //rb.bodyType = RigidbodyType2D.Static;
         rb.simulated = false;
-        //RestartLevel();
         animator.SetTrigger("Death");
     }
 
