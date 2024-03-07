@@ -9,30 +9,54 @@ public class PlayerController : MonoBehaviour
     private Rigidbody2D rb;
     [SerializeField]
     private SpriteRenderer spriteRenderer;
+    [SerializeField]
+    private Animator animator;
+    [SerializeField]
+    private Transform groundCheck;
+    [SerializeField]
+    private LayerMask groundLayer;
     //
     [SerializeField]
-    private float moveSpeed = 10f;
+    private float moveSpeed = 5f;
+    [SerializeField]
+    private float climbingSpeed = 8f;
     [SerializeField]
     private float jumpForce = 15f;
     //
     private Vector2 moveDirection;
-    private bool isGrounded = false;
-    private int groundLayer;
-    private Transform playerGroundLocation;
+    private bool isLadder;
+    private bool isClimbing;
 
     private void Awake()
     {
         rb = GetComponent<Rigidbody2D>();
         spriteRenderer = GetComponent<SpriteRenderer>();
+        animator = GetComponent<Animator>();
+        groundCheck = transform.Find("GroundCheck");
         groundLayer = LayerMask.GetMask("Ground");
-        playerGroundLocation = transform.Find("PlayerGround");
+    }
+
+    private void Update()
+    {
+        if (isLadder && Mathf.Abs(moveDirection.y) > 0) {
+            isClimbing = true;
+        }
+
+        if (moveDirection.x < 0f) {
+            spriteRenderer.flipX = true;
+            animator.SetBool("isRun", true);
+        } else if (moveDirection.x > 0f) {
+            spriteRenderer.flipX = false;
+            animator.SetBool("isRun", true);
+        } else {
+            animator.SetBool("isRun", false);
+        }
     }
 
     private void FixedUpdate()
     {
-        GroundCheck();
-
         ApplyMovement();
+        LadderMovement();
     }
 
     void OnMove(InputValue iv) 
@@ -42,36 +66,57 @@ public class PlayerController : MonoBehaviour
 
     void OnJump()
     {
-        if (isGrounded) {
-            rb.AddForce(new Vector2(0, jumpForce), ForceMode2D.Impulse);
-            //rb.velocity = rb.velocity + Vector2.up * jumpForce;
-            Debug.Log("IsGrounded - Jump: " + moveDirection.y);
-            isGrounded = false;
+        if (IsGrounded()) {
+            rb.velocity = new Vector2(rb.velocity.x, jumpForce);
+            animator.SetTrigger("Jump");
+        }
+        if (rb.velocity.y > 0f) {
+            rb.velocity = new Vector2(rb.velocity.x, rb.velocity.y * 0.5f);
         }
     }
 
-    private void GroundCheck()
-    {
-        RaycastHit2D hit;
-        float distance = 0.5f;
-
-        hit = Physics2D.Raycast(playerGroundLocation.position, Vector2.down, distance, groundLayer);
-
-        isGrounded = hit.collider != null;
-    }
 
     private void ApplyMovement()
     {
-        rb.velocity += new Vector2(moveDirection.x * moveSpeed * Time.deltaTime, 0f);
-
-        if (moveDirection.x == 0 && isGrounded == true) {
-            rb.velocity = new Vector2(0, rb.velocity.y);
+        if (moveDirection.x == 0) {
+            if (IsGrounded()) {
+                rb.velocity = new Vector2(0, rb.velocity.y);
+            }
+            return;
         }
 
-        if (moveDirection.x < 0f) {
-            spriteRenderer.flipX = true;
-        } else if (moveDirection.x > 0f) {
-            spriteRenderer.flipX = false;
+        rb.velocity = new Vector2(moveDirection.x * moveSpeed, rb.velocity.y);
+    }
+
+    private void LadderMovement()
+    {
+        if (!isClimbing) {
+            rb.gravityScale = 4f;
+            return;
+        }
+
+        rb.velocity = new Vector2(rb.velocity.x, moveDirection.y * climbingSpeed);
+        rb.gravityScale = 0f;
+    }
+
+
+    private bool IsGrounded()
+    {
+        return Physics2D.OverlapCircle(groundCheck.position, 0.2f, groundLayer);
+    }
+
+    private void OnTriggerEnter2D(Collider2D other)
+    {
+        if (other.CompareTag("Ladder")) {
+            isLadder = true;
+        }
+    }
+
+    private void OnTriggerExit2D(Collider2D other)
+    {
+        if (other.CompareTag("Ladder")) {
+            isLadder = false;
+            isClimbing = false;
         }
     }
 }
